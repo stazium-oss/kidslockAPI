@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KidLock — Родительский контроль</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #F5F4F0;
+    --surface:   #FFFFFF;
+    --border:    #E2E0D8;
+    --text:      #1A1A18;
+    --muted:     #6B6966;
+    --blue:      #185FA5;
+    --blue-bg:   #E6F1FB;
+    --green:     #1A6E3C;
+    --green-bg:  #D4EDDA;
+    --amber:     #854F0B;
+    --amber-bg:  #FFF3CD;
+    --red:       #A32D2D;
+    --red-bg:    #FDECEA;
+    --radius:    12px;
+    --radius-sm: 8px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:       #1C1C1A;
+      --surface:  #272724;
+      --border:   #3A3A36;
+      --text:     #E8E6DF;
+      --muted:    #9A9790;
+      --blue:     #85B7EB;
+      --blue-bg:  #042C53;
+      --green:    #9FE1CB;
+      --green-bg: #04342C;
+      --amber:    #FAC775;
+      --amber-bg: #412402;
+      --red:      #F7C1C1;
+      --red-bg:   #501313;
+    }
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+
+  /* ── Layout ── */
+  .app    { max-width: 860px; margin: 0 auto; padding: 24px 16px 60px; }
+  .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; }
+  .logo   { font-size: 22px; font-weight: 600; color: var(--text); letter-spacing: -.4px; }
+  .logo span { color: var(--blue); }
+
+  /* ── Card ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .card-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    margin-bottom: 14px;
+  }
+
+  /* ── Status badge ── */
+  .status-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 12px; border-radius: 20px;
+    font-size: 13px; font-weight: 500;
+  }
+  .badge-green { background: var(--green-bg); color: var(--green); }
+  .badge-red   { background: var(--red-bg);   color: var(--red);   }
+  .badge-amber { background: var(--amber-bg); color: var(--amber); }
+  .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: currentColor; flex-shrink: 0;
+  }
+  .dot-pulse { animation: pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+  /* ── Time display ── */
+  .time-big {
+    font-size: 48px; font-weight: 300; line-height: 1;
+    letter-spacing: -2px; color: var(--text);
+    margin: 8px 0 4px;
+  }
+  .time-label { font-size: 13px; color: var(--muted); }
+
+  /* ── Progress bar ── */
+  .progress-wrap { margin-top: 14px; }
+  .progress-label {
+    display: flex; justify-content: space-between;
+    font-size: 12px; color: var(--muted); margin-bottom: 5px;
+  }
+  .progress-track {
+    height: 6px; background: var(--border); border-radius: 3px; overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%; border-radius: 3px;
+    background: var(--blue); transition: width .5s ease;
+  }
+  .progress-fill.warn { background: var(--amber); }
+  .progress-fill.danger { background: var(--red); }
+
+  /* ── Grid ── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 520px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  /* ── Stat box ── */
+  .stat { text-align: center; padding: 14px; }
+  .stat-val { font-size: 28px; font-weight: 300; letter-spacing: -1px; }
+  .stat-lbl { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  /* ── Buttons ── */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+    padding: 9px 18px; border-radius: var(--radius-sm);
+    font-size: 14px; font-weight: 500; cursor: pointer;
+    border: 1px solid transparent; transition: opacity .15s;
+    font-family: inherit;
+  }
+  .btn:hover { opacity: .82; }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+  .btn-primary  { background: var(--blue);  color: #fff; border-color: var(--blue);  }
+  .btn-success  { background: var(--green); color: #fff; border-color: var(--green); }
+  .btn-danger   { background: var(--red);   color: #fff; border-color: var(--red);   }
+  .btn-ghost    { background: transparent; color: var(--text); border-color: var(--border); }
+  .btn-sm       { padding: 6px 12px; font-size: 13px; }
+
+  .btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+
+  /* ── Quick extend pills ── */
+  .extend-pills { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .pill {
+    padding: 7px 14px; border-radius: 20px; font-size: 13px; font-weight: 500;
+    cursor: pointer; border: 1px solid var(--border);
+    background: var(--surface); color: var(--text);
+    transition: background .15s, color .15s;
+  }
+  .pill:hover { background: var(--blue-bg); color: var(--blue); border-color: var(--blue); }
+  .pill.minus:hover { background: var(--red-bg); color: var(--red); border-color: var(--red); }
+
+  /* ── Schedule table ── */
+  .schedule-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .schedule-table th {
+    text-align: left; font-weight: 500; color: var(--muted);
+    font-size: 12px; padding: 6px 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .schedule-table td {
+    padding: 9px 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .schedule-table tr:last-child td { border-bottom: none; }
+  .schedule-table input[type="time"],
+  .schedule-table input[type="number"] {
+    width: 100%; padding: 5px 8px; border-radius: 6px;
+    border: 1px solid var(--border); background: var(--bg);
+    color: var(--text); font-size: 13px; font-family: inherit;
+  }
+  .schedule-table input:focus { outline: 2px solid var(--blue); border-color: var(--blue); }
+  .day-name { font-weight: 500; min-width: 90px; }
+
+  /* ── Login screen ── */
+  .login-wrap {
+    min-height: 100vh; display: flex; align-items: center;
+    justify-content: center; padding: 20px;
+  }
+  .login-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 32px; width: 100%; max-width: 360px;
+  }
+  .login-title { font-size: 22px; font-weight: 600; margin-bottom: 6px; }
+  .login-sub   { font-size: 14px; color: var(--muted); margin-bottom: 24px; }
+
+  .field       { margin-bottom: 14px; }
+  .field label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 5px; }
+  .field input {
+    width: 100%; padding: 9px 12px; border-radius: var(--radius-sm);
+    border: 1px solid var(--border); background: var(--bg);
+    color: var(--text); font-size: 14px; font-family: inherit;
+  }
+  .field input:focus { outline: 2px solid var(--blue); border-color: var(--blue); }
+
+  .error-msg { color: var(--red); font-size: 13px; margin-top: 8px; }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: var(--text); color: var(--surface);
+    padding: 10px 18px; border-radius: var(--radius-sm);
+    font-size: 14px; z-index: 100;
+    opacity: 0; transform: translateY(8px);
+    transition: opacity .2s, transform .2s;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+
+  /* ── Tabs ── */
+  .tabs { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
+  .tab {
+    padding: 9px 16px; font-size: 14px; font-weight: 500; cursor: pointer;
+    border: none; background: none; color: var(--muted);
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+    font-family: inherit; transition: color .15s;
+  }
+  .tab.active { color: var(--blue); border-bottom-color: var(--blue); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* ── Divider ── */
+  hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+
+  /* ── Logout btn ── */
+  .logout { font-size: 13px; color: var(--muted); background: none; border: none; cursor: pointer; font-family: inherit; }
+  .logout:hover { color: var(--red); }
+
+  /* ── Spinner ── */
+  .spinner {
+    width: 18px; height: 18px; border: 2px solid var(--border);
+    border-top-color: var(--blue); border-radius: 50%;
+    animation: spin .7s linear infinite; display: inline-block;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<!-- ── LOGIN ─────────────────────────────────────────────── -->
+<div class="login-wrap" id="login-screen">
+  <div class="login-card">
+    <div class="login-title">🔒 KidLock</div>
+    <div class="login-sub">Родительский контроль</div>
+
+    <div class="field">
+      <label>Пароль</label>
+      <input type="password" id="pwd-input" placeholder="Введи пароль родителя"
+             onkeydown="if(event.key==='Enter') doLogin()">
+    </div>
+    <button class="btn btn-primary" style="width:100%" onclick="doLogin()">Войти</button>
+    <div class="error-msg" id="login-error"></div>
+
+    <hr>
+    <button class="btn btn-ghost" style="width:100%; margin-top:4px" onclick="doChildLogin()">
+      Войти как ребёнок (только просмотр)
+    </button>
+  </div>
+</div>
+
+<!-- ── MAIN APP ───────────────────────────────────────────── -->
+<div class="app" id="main-app" style="display:none">
+
+  <div class="header">
+    <div class="logo">Kid<span>Lock</span></div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <span id="role-badge" class="badge badge-blue" style="font-size:12px"></span>
+      <button class="logout" onclick="doLogout()">Выйти</button>
+    </div>
+  </div>
+
+  <!-- ── TABS ── -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('status',this)">Статус</button>
+    <button class="tab" onclick="switchTab('schedule',this)" id="tab-schedule">Расписание</button>
+  </div>
+
+  <!-- ── STATUS TAB ── -->
+  <div class="tab-panel active" id="panel-status">
+
+    <!-- Status card -->
+    <div class="card">
+      <div class="card-title">Текущий статус</div>
+      <div class="status-row">
+        <div id="status-badge" class="badge badge-green">
+          <span class="dot dot-pulse"></span>
+          <span id="status-text">Загрузка...</span>
+        </div>
+        <span id="status-reason" style="font-size:13px;color:var(--muted)"></span>
+      </div>
+
+      <div class="time-big" id="time-display">--:--:--</div>
+      <div class="time-label" id="time-sublabel">текущее время</div>
+
+      <div class="progress-wrap" id="progress-wrap" style="display:none">
+        <div class="progress-label">
+          <span>Использовано сегодня</span>
+          <span id="progress-text"></span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid-2">
+      <div class="card stat">
+        <div class="stat-val" id="stat-used">—</div>
+        <div class="stat-lbl">минут использовано</div>
+      </div>
+      <div class="card stat">
+        <div class="stat-val" id="stat-left">—</div>
+        <div class="stat-lbl">минут осталось</div>
+      </div>
+    </div>
+
+    <!-- Parent controls -->
+    <div class="card" id="parent-controls" style="display:none">
+      <div class="card-title">Управление временем</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:10px">
+        Добавить или убрать время на сегодня:
+      </div>
+      <div class="extend-pills">
+        <span class="pill" onclick="extend(15)">+15 мин</span>
+        <span class="pill" onclick="extend(30)">+30 мин</span>
+        <span class="pill" onclick="extend(60)">+1 час</span>
+        <span class="pill minus" onclick="extend(-15)">−15 мин</span>
+        <span class="pill minus" onclick="extend(-30)">−30 мин</span>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-success btn-sm" onclick="unlockToday()">
+          🔓 Разблокировать до конца дня
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── SCHEDULE TAB ── -->
+  <div class="tab-panel" id="panel-schedule">
+    <div class="card">
+      <div class="card-title">Расписание по дням</div>
+      <table class="schedule-table" id="schedule-table">
+        <thead>
+          <tr>
+            <th>День</th>
+            <th>Начало</th>
+            <th>Конец</th>
+            <th>Лимит (мин)</th>
+          </tr>
+        </thead>
+        <tbody id="schedule-body">
+          <tr><td colspan="4" style="text-align:center;color:var(--muted);padding:20px">
+            <span class="spinner"></span>
+          </td></tr>
+        </tbody>
+      </table>
+      <div class="btn-row" id="schedule-save-row" style="display:none">
+        <button class="btn btn-primary" onclick="saveSchedule()">Сохранить расписание</button>
+        <button class="btn btn-ghost" onclick="loadSchedule()">Отменить</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Настройки предупреждений</div>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <div>
+          <label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">
+            Предупреждение за (сек)
+          </label>
+          <input type="number" id="warn-seconds" min="30" max="600" step="10"
+                 style="width:120px;padding:7px 10px;border-radius:8px;border:1px solid var(--border);
+                        background:var(--bg);color:var(--text);font-size:14px">
+        </div>
+        <button class="btn btn-ghost btn-sm" style="margin-top:18px" onclick="saveWarnSeconds()">
+          Сохранить
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── TOAST ── -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── State ────────────────────────────────────────────────
+let token = localStorage.getItem('kl_token') || '';
+let role  = localStorage.getItem('kl_role')  || '';
+let statusInterval = null;
+let clockInterval  = null;
+
+const DAYS_RU = {
+  monday:'Понедельник', tuesday:'Вторник', wednesday:'Среда',
+  thursday:'Четверг', friday:'Пятница', saturday:'Суббота', sunday:'Воскресенье'
+};
+const DAYS_ORDER = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
+
+// ── Init ─────────────────────────────────────────────────
+window.onload = () => {
+  if (token && role) {
+    showApp();
+  }
+};
+
+// ── Auth ─────────────────────────────────────────────────
+async function doLogin() {
+  const pwd = document.getElementById('pwd-input').value.trim();
+  if (!pwd) return;
+  try {
+    const res = await api('/api/login', 'POST', { password: pwd });
+    token = res.token; role = res.role;
+    localStorage.setItem('kl_token', token);
+    localStorage.setItem('kl_role', role);
+    showApp();
+  } catch(e) {
+    document.getElementById('login-error').textContent = 'Неверный пароль';
+  }
+}
+
+async function doChildLogin() {
+  const res = await api('/api/login/child', 'POST', {});
+  token = res.token; role = res.role;
+  localStorage.setItem('kl_token', token);
+  localStorage.setItem('kl_role', role);
+  showApp();
+}
+
+function doLogout() {
+  token = ''; role = '';
+  localStorage.removeItem('kl_token');
+  localStorage.removeItem('kl_role');
+  clearInterval(statusInterval);
+  clearInterval(clockInterval);
+  document.getElementById('main-app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+}
+
+// ── Show app ─────────────────────────────────────────────
+function showApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('main-app').style.display = 'block';
+  document.getElementById('login-error').textContent = '';
+
+  // Role badge
+  const rb = document.getElementById('role-badge');
+  if (role === 'parent') {
+    rb.textContent = '👤 Родитель'; rb.className = 'badge badge-blue';
+  } else {
+    rb.textContent = '👶 Ребёнок'; rb.className = 'badge badge-amber';
+  }
+
+  // Show/hide parent controls
+  const isParent = role === 'parent';
+  document.getElementById('parent-controls').style.display = isParent ? 'block' : 'none';
+  document.getElementById('tab-schedule').style.display   = isParent ? '' : 'none';
+
+  // Start polling
+  loadStatus();
+  statusInterval = setInterval(loadStatus, 10000);
+
+  // Local clock
+  clockInterval = setInterval(() => {
+    const now = new Date();
+    document.getElementById('time-display').textContent =
+      now.toTimeString().slice(0,8);
+  }, 1000);
+
+  if (isParent) loadSchedule();
+}
+
+// ── Status ───────────────────────────────────────────────
+async function loadStatus() {
+  try {
+    const s = await api('/api/status');
+    renderStatus(s);
+  } catch(e) {
+    if (e.status === 401) doLogout();
+  }
+}
+
+function renderStatus(s) {
+  const allowed = s.allowed;
+  const badge   = document.getElementById('status-badge');
+  const text    = document.getElementById('status-text');
+  const reason  = document.getElementById('status-reason');
+
+  if (allowed) {
+    badge.className = 'badge badge-green';
+    text.textContent = '✓ Разрешено';
+    reason.textContent = '';
+  } else {
+    badge.className = 'badge badge-red';
+    text.textContent = '✗ Заблокировано';
+    reason.textContent = s.reason || '';
+  }
+
+  // Sublabel: time until lockout
+  const left = s.minutes_until_lockout;
+  const sub  = document.getElementById('time-sublabel');
+  if (left !== null && left !== undefined && allowed) {
+    const h = Math.floor(left / 60);
+    const m = Math.round(left % 60);
+    sub.textContent = h > 0
+      ? `осталось ${h} ч ${m} мин`
+      : `осталось ${m} мин`;
+    sub.style.color = left < 15 ? 'var(--red)' : left < 30 ? 'var(--amber)' : 'var(--muted)';
+  } else {
+    sub.textContent = 'текущее время';
+    sub.style.color = 'var(--muted)';
+  }
+
+  // Progress bar
+  const used  = s.used_minutes || 0;
+  const limit = s.daily_limit_minutes;
+  const pw    = document.getElementById('progress-wrap');
+  if (limit) {
+    pw.style.display = 'block';
+    const pct = Math.min(100, (used / limit) * 100);
+    const fill = document.getElementById('progress-fill');
+    fill.style.width = pct + '%';
+    fill.className = 'progress-fill' + (pct > 90 ? ' danger' : pct > 70 ? ' warn' : '');
+    document.getElementById('progress-text').textContent =
+      `${Math.round(used)} / ${limit} мин`;
+  } else {
+    pw.style.display = 'none';
+  }
+
+  // Stats
+  document.getElementById('stat-used').textContent = Math.round(used);
+  document.getElementById('stat-left').textContent =
+    left !== null && left !== undefined ? Math.round(left) : '∞';
+}
+
+// ── Extend time ───────────────────────────────────────────
+async function extend(minutes) {
+  try {
+    const r = await api('/api/extend', 'POST', { minutes });
+    const sign = minutes > 0 ? '+' : '';
+    toast(`${sign}${minutes} мин → новый лимит: ${r.new_limit} мин`);
+    loadStatus();
+  } catch(e) {
+    toast('Ошибка: ' + (e.message || 'что-то пошло не так'), true);
+  }
+}
+
+async function unlockToday() {
+  try {
+    await api('/api/unlock/now', 'POST', {});
+    toast('Разблокировано до 23:59');
+    loadStatus();
+  } catch(e) {
+    toast('Ошибка разблокировки', true);
+  }
+}
+
+// ── Schedule ──────────────────────────────────────────────
+async function loadSchedule() {
+  try {
+    const cfg = await api('/api/schedule');
+    renderSchedule(cfg);
+    const ws = document.getElementById('warn-seconds');
+    if (ws) ws.value = cfg.warning_seconds || 120;
+  } catch(e) {}
+}
+
+function renderSchedule(cfg) {
+  const hours  = cfg.schedule?.allowed_hours        || {};
+  const limits = cfg.schedule?.daily_limit_minutes  || {};
+  const tbody  = document.getElementById('schedule-body');
+  const saveRow = document.getElementById('schedule-save-row');
+
+  tbody.innerHTML = DAYS_ORDER.map(day => {
+    const h = hours[day]  || {};
+    const l = limits[day] ?? '';
+    return `<tr>
+      <td class="day-name">${DAYS_RU[day]}</td>
+      <td><input type="time" id="s_start_${day}" value="${h.start || ''}"
+           ${role !== 'parent' ? 'disabled' : ''} onchange="markDirty()"></td>
+      <td><input type="time" id="s_end_${day}"   value="${h.end   || ''}"
+           ${role !== 'parent' ? 'disabled' : ''} onchange="markDirty()"></td>
+      <td><input type="number" id="s_limit_${day}" value="${l}" min="0" max="1440"
+           placeholder="без лимита"
+           ${role !== 'parent' ? 'disabled' : ''} onchange="markDirty()"></td>
+    </tr>`;
+  }).join('');
+
+  if (role === 'parent') saveRow.style.display = 'flex';
+}
+
+function markDirty() {
+  // Visual indicator that there are unsaved changes (handled by save button presence)
+}
+
+async function saveSchedule() {
+  const allowed_hours = {};
+  const daily_limit_minutes = {};
+
+  for (const day of DAYS_ORDER) {
+    const start = document.getElementById(`s_start_${day}`)?.value;
+    const end   = document.getElementById(`s_end_${day}`)?.value;
+    const limit = document.getElementById(`s_limit_${day}`)?.value;
+
+    if (start && end) allowed_hours[day] = { start, end };
+    if (limit !== '') daily_limit_minutes[day] = parseInt(limit);
+  }
+
+  try {
+    await api('/api/schedule', 'PUT', { allowed_hours, daily_limit_minutes });
+    toast('Расписание сохранено ✓');
+    loadStatus();
+  } catch(e) {
+    toast('Ошибка сохранения', true);
+  }
+}
+
+async function saveWarnSeconds() {
+  const v = parseInt(document.getElementById('warn-seconds').value);
+  if (!v || v < 10) { toast('Минимум 10 секунд', true); return; }
+  try {
+    await api('/api/schedule', 'PUT', { warning_seconds: v });
+    toast('Настройки сохранены ✓');
+  } catch(e) {
+    toast('Ошибка', true);
+  }
+}
+
+// ── Tabs ─────────────────────────────────────────────────
+function switchTab(name, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('panel-' + name).classList.add('active');
+}
+
+// ── API helper ────────────────────────────────────────────
+async function api(path, method = 'GET', body = null) {
+  const opts = {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': 'Bearer ' + token } : {}),
+    },
+  };
+  if (body !== null) opts.body = JSON.stringify(body);
+  const res = await fetch(path, opts);
+  if (!res.ok) {
+    const err = new Error(await res.text());
+    err.status = res.status;
+    throw err;
+  }
+  return res.json();
+}
+
+// ── Toast ────────────────────────────────────────────────
+function toast(msg, isError = false) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.background = isError ? 'var(--red)' : 'var(--text)';
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2800);
+}
+</script>
+</body>
+</html>
