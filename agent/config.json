@@ -1,0 +1,24 @@
+{
+  "warning_seconds": 120,
+  "check_interval_seconds": 30,
+  "schedule": {
+    "allowed_hours": {
+      "monday":    { "start": "10:00", "end": "21:00" },
+      "tuesday":   { "start": "10:00", "end": "21:00" },
+      "wednesday": { "start": "10:00", "end": "21:00" },
+      "thursday":  { "start": "10:00", "end": "21:00" },
+      "friday":    { "start": "10:00", "end": "22:00" },
+      "saturday":  { "start": "09:00", "end": "23:00" },
+      "sunday":    { "start": "09:00", "end": "22:00" }
+    },
+    "daily_limit_minutes": {
+      "monday":    120,
+      "tuesday":   120,
+      "wednesday": 120,
+      "thursday":  120,
+      "friday":    180,
+      "saturday":  240,
+      "sunday":    240
+    }
+  }
+}
