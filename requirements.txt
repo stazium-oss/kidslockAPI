@@ -1,0 +1,9 @@
+# KidLock — все зависимости
+
+# Этап 1: Windows-сервис
+pywin32>=306
+
+# Этап 2: веб-сервер
+fastapi>=0.111.0
+uvicorn[standard]>=0.30.0
+pydantic>=2.0.0
